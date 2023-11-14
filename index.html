@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Tasas de Cambio</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f4f4f4;
+            text-align: center;
+        }
+
+        h1, h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        select, input, button {
+            margin-bottom: 10px;
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        canvas {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            display: block;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>Análisis de Tasas de Cambio</h1>
+
+    <label for="currencies">Seleccionar monedas:</label>
+    <select id="currencies" multiple>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+        <option value="JPY">JPY</option>
+        <option value="GBP">GBP</option>
+
+    </select>
+
+    <label for="amount">Ingresar cantidad:</label>
+    <input type="number" id="amount" placeholder="Ingrese la cantidad">
+
+    <button onclick="analizar()">Analizar</button>
+
+    <div>
+        <h2>Análisis de Tasas de Cambio</h2>
+        <canvas id="chart"></canvas>
+    </div>
+
+    <script>
+        let myChart;
+        let historicalData;
+        let userAmount;
+
+        async function analizar() {
+            const selectedCurrencies = Array.from(document.getElementById('currencies').selectedOptions, option => option.value);
+
+            userAmount = parseFloat(document.getElementById('amount').value);
+
+            if (isNaN(userAmount)) {
+                alert("Por favor, ingrese una cantidad válida.");
+                return;
+            }
+
+            historicalData = await obtenerDatosHistoricos(selectedCurrencies);
+
+            mostrarGrafico(historicalData);
+        }
+
+        async function obtenerDatosHistoricos(currencies) {
+            const baseUrl = 'https://api.frankfurter.app';
+
+            const today = new Date();
+
+            const todayFormatted = today.toISOString().split('T')[0];
+
+            const url = `${baseUrl}/${todayFormatted}?from=${currencies.join(',')}`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            return data;
+        }
+
+        function mostrarGrafico(data) {
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            const ctx = document.getElementById('chart').getContext('2d');
+
+            const currencies = Object.keys(data.rates);
+
+            const baseValues = currencies.map(currency => {
+                return userAmount / data.rates[currency];
+            });
+
+            const backgroundColors = [
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(255, 99, 132, 0.8)',
+                'rgba(255, 205, 86, 0.8)',
+                'rgba(54, 162, 235, 0.8)',
+            ];
+
+            const datasets = [{
+                label: "Valor en moneda base",
+                data: baseValues,
+                backgroundColor: backgroundColors,
+            }];
+
+            const labels = currencies;
+
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Valor en moneda base'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
